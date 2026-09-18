@@ -87,13 +87,13 @@ const Login = () => {
 
   return (
     <Container maxWidth="sm">
-      <Card sx={{ mt: 10 }}>
+      <Card sx={{ mt: 10, bgcolor: "#FFF3C4" }}>
         <CardContent sx={{ p: 4 }}>
           <Typography
             variant="h4"
             gutterBottom
           >
-            KoalaTech University
+            KoalaTech University v2.0 (Continuous Deployment)
           </Typography>
 
           <Typography
