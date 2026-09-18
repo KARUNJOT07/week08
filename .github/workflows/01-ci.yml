@@ -6,6 +6,12 @@ on:
     branches:
       - main
   
+  # 9.3C CD: run the test suite on every pull request into main.
+  # build-and-push stays push-only, so nothing deploys until the PR is merged.
+  pull_request:
+    branches:
+      - main
+
   # Manual trigger for the workflow
   workflow_dispatch:
 
