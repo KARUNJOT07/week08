@@ -1,15 +1,10 @@
 name: 05 - Monitoring (Prometheus + Grafana)
 
-# Runs after every successful production deployment, so each release is observable,
-# and can also be run manually.
+# Called by "04 - Deploy to Production" as a reusable workflow after every successful
+# production deployment. (GitHub does not trigger a 4th level of workflow_run, so the
+# earlier 04 -> 05 workflow_run chain never fired.) Can also be run manually.
 on:
-  workflow_run:
-    workflows:
-      - "04 - Deploy to Production"
-    types:
-      - completed
-    branches:
-      - main
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -23,7 +18,6 @@ jobs:
   monitoring:
     name: Deploy and validate monitoring
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout repository
