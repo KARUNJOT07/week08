@@ -115,6 +115,11 @@ jobs:
     name: Build and Push ${{ matrix.image }}
     runs-on: ubuntu-latest
 
+    # Least privilege: read the repo, and allow Docker Scout to post its report on the PR
+    permissions:
+      contents: read
+      pull-requests: write
+
     # All backend tests must pass before this job starts
     needs:
       - backend-test
@@ -191,6 +196,7 @@ jobs:
           only-severities: critical
           only-fixed: true
           exit-code: true
+          write-comment: false
 
       - name: Push Docker image with commit SHA
         if: github.event_name != 'pull_request'
