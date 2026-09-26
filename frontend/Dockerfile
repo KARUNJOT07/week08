@@ -24,6 +24,10 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 
+# 10.2D remediation: Docker Scout flagged 7 fixable CRITICAL CVEs in Alpine 3.21
+# base packages (openssl, libxml2, expat). Upgrade OS packages to the patched versions.
+RUN apk upgrade --no-cache
+
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 COPY --from=build /app/dist /usr/share/nginx/html
