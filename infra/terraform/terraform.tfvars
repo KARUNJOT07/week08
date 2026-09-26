@@ -1,0 +1,6 @@
+resource_group_name  = "sit722-week08-rg"
+acr_name             = "karunjot07acr08w"
+storage_account_name = "karunjot07sa08w"
+aks_cluster_name     = "sit722-week08-aks"
+aks_dns_prefix       = "sit722week08"
+environment          = "staging-production"
