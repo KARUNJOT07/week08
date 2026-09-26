@@ -1,0 +1,22 @@
+# kube-prometheus-stack values for SIT722 10.2D
+# Short resource names (kps-prometheus, kps-grafana, ...) so the pipeline can reference them reliably
+fullnameOverride: kps
+
+# Alertmanager is not needed for this task; disabling it saves cluster resources
+alertmanager:
+  enabled: false
+
+grafana:
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+
+prometheus:
+  prometheusSpec:
+    # Discover ServiceMonitors/PodMonitors that are not labelled with this Helm release
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    scrapeInterval: 15s
+    retention: 2d
