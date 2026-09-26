@@ -1,0 +1,17 @@
+# Tells Prometheus to scrape student-service's /metrics endpoint in the production namespace
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: student-service
+  namespace: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - production
+  selector:
+    matchLabels:
+      app: student-service
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

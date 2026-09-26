@@ -103,3 +103,9 @@ def health_check() -> dict[str, str]:
         "status": "healthy",
         "service": "student-service",
     }
+
+
+# 10.2D: expose Prometheus metrics at /metrics (request count, latency, in-progress)
+from prometheus_fastapi_instrumentator import Instrumentator  # noqa: E402
+
+Instrumentator().instrument(app).expose(app, include_in_schema=False)

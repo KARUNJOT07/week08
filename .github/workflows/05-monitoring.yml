@@ -1,0 +1,92 @@
+name: 05 - Monitoring (Prometheus + Grafana)
+
+# Runs after every successful production deployment, so each release is observable,
+# and can also be run manually.
+on:
+  workflow_run:
+    workflows:
+      - "04 - Deploy to Production"
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monitoring
+  cancel-in-progress: false
+
+jobs:
+  monitoring:
+    name: Deploy and validate monitoring
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ vars.AKS_RESOURCE_GROUP }} \
+            --name ${{ vars.AKS_CLUSTER_NAME }} \
+            --overwrite-existing
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Install or upgrade kube-prometheus-stack (Prometheus + Grafana)
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo update
+          helm upgrade --install kps prometheus-community/kube-prometheus-stack \
+            --namespace monitoring --create-namespace \
+            --version 91.4.1 \
+            --values monitoring/helm/values.yaml \
+            --set grafana.adminPassword="${{ secrets.GRAFANA_ADMIN_PASSWORD }}" \
+            --wait --timeout 10m
+
+      - name: Apply ServiceMonitor for student-service
+        run: kubectl apply -f monitoring/k8s/
+
+      - name: Provision Grafana dashboard
+        run: |
+          kubectl -n monitoring create configmap koalatech-dashboard \
+            --from-file=monitoring/dashboards/koalatech.json \
+            --dry-run=client -o yaml \
+            | kubectl label --local -f - grafana_dashboard=1 -o yaml \
+            | kubectl apply -f -
+
+      - name: Validate monitoring stack
+        run: |
+          kubectl -n monitoring rollout status deployment/kps-grafana --timeout=180s
+          kubectl -n monitoring rollout status deployment/kps-kube-state-metrics --timeout=180s
+          kubectl -n monitoring wait --for=condition=Ready pod -l app.kubernetes.io/name=prometheus --timeout=300s
+          kubectl -n monitoring get pods
+          kubectl -n monitoring port-forward svc/kps-prometheus 9090:9090 >/dev/null 2>&1 &
+          sleep 5
+          UP=0
+          for i in $(seq 1 18); do
+            UP=$(curl -s 'http://localhost:9090/api/v1/query?query=up%7Bjob%3D%22student-service%22%7D' | jq -r '.data.result[0].value[1] // "0"')
+            echo "attempt $i: up{job=\"student-service\"} = $UP"
+            [ "$UP" = "1" ] && break
+            sleep 10
+          done
+          [ "$UP" = "1" ] || { echo "Prometheus is NOT scraping student-service"; exit 1; }
+          TARGETS=$(curl -s http://localhost:9090/api/v1/targets | jq '[.data.activeTargets[] | select(.health=="up")] | length')
+          echo "Healthy Prometheus scrape targets: $TARGETS"
+          {
+            echo "### Monitoring validation"
+            echo "- Grafana, kube-state-metrics and Prometheus are running in namespace monitoring"
+            echo "- Prometheus is scraping the application: up{job=\"student-service\"} = $UP"
+            echo "- Healthy scrape targets: $TARGETS"
+          } >> "$GITHUB_STEP_SUMMARY"
