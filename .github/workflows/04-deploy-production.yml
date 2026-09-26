@@ -162,3 +162,11 @@ jobs:
           kubectl get pods -n production
           kubectl get services -n production
           kubectl get pvc -n production
+
+  monitoring:
+    name: Monitoring (Prometheus + Grafana)
+    needs: deploy-production
+    permissions:
+      contents: read
+    uses: ./.github/workflows/05-monitoring.yml
+    secrets: inherit
